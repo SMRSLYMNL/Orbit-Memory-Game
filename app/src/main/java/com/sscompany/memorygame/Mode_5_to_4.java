@@ -107,6 +107,78 @@ public class Mode_5_to_4 extends AppCompatActivity {
             positions[random] = i / 2;
         }
 
+        for(int i = 0; i < size; i++)
+        {
+            childs[i].setClickable(false);
+        }
+
+        for(int i = 0; i < size; i++)
+        {
+            Drawable drawable = getResources().getDrawable(pictures[positions[i]]);
+            childs[i].setImageDrawable(drawable);
+        }
+
+        new CountDownTimer(4050, 1000) {
+
+            public void onTick(long millisUntilFinished)
+            {
+
+            }
+
+            public void onFinish()
+            {
+                for(int i = 0; i < size; i++)
+                {
+                    final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 0f, 90f);
+                    flip.setDuration(150);
+                    flip.start();
+                }
+
+                new CountDownTimer(150, 1000) {
+
+                    public void onTick(long millisUntilFinished)
+                    {
+
+                    }
+
+                    public void onFinish()
+                    {
+                        for(int i = 0; i < size; i++)
+                        {
+                            Drawable drawable = getResources().getDrawable(R.drawable.tarzan_logo);
+                            childs[i].setImageDrawable(drawable);
+                        }
+
+                        for(int i = 0; i < size; i++)
+                        {
+                            final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 270f, 360f);
+                            flip.setDuration(150);
+                            flip.start();
+                        }
+
+                        new CountDownTimer(150, 1000) {
+
+                            public void onTick(long millisUntilFinished)
+                            {
+
+                            }
+
+                            public void onFinish()
+                            {
+                                for(int i = 0; i < size; i++)
+                                {
+                                    childs[i].setClickable(true);
+                                }
+                            }
+
+                        }.start();
+
+                    }
+
+                }.start();
+            }
+
+        }.start();
 
     }
 

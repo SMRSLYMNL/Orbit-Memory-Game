@@ -21,11 +21,12 @@ public class Mode_2_to_3 extends AppCompatActivity {
     int count;
     int k;
     int opened = -1;
-    int[] found = new int[6];
-    int[] positions = new int[6];
+    final int size = 6;
+    int[] found = new int[size];
+    int[] positions = new int[size];
     private int countPair = 0;
     int currentPos = -1;
-    final int size = 6;
+    ImageView childs[] = new ImageView[size];
     final int[] pictures = new int[]
             {
                     R.drawable.jane_found_1,
@@ -57,19 +58,8 @@ public class Mode_2_to_3 extends AppCompatActivity {
         int height = displayMetrics.heightPixels - actionBarHeight - statusBarHeight;
         int width = displayMetrics.widthPixels;
 
-        /*Display display = getWindowManager().getDefaultDisplay();
-        DisplayMetrics outMetrics = new DisplayMetrics ();
-        display.getMetrics(outMetrics);
-
-        int density  = getResources().getDisplayMetrics().densityDpi;
-        int dpHeight = outMetrics.heightPixels / density;
-        int dpWidth  = outMetrics.widthPixels / density;*/
-
-        height -= dpToPx(40, Mode_2_to_3.this);
-        width -= dpToPx(40, Mode_2_to_3.this);
-
-        height -= dpToPx(12, Mode_2_to_3.this);
-        width -= dpToPx(18, Mode_2_to_3.this);
+        height -= dpToPx(52, Mode_2_to_3.this);
+        width -= dpToPx(58, Mode_2_to_3.this);
 
         int sideOfSquare = Math.min(height / 2, width / 3);
 
@@ -78,6 +68,8 @@ public class Mode_2_to_3 extends AppCompatActivity {
             ImageView image = (ImageView) gridLayout.getChildAt(i);
             image.setMaxWidth(sideOfSquare);
             image.setMinimumWidth(sideOfSquare);
+
+            childs[i] = image;
 
             image.setMaxHeight(sideOfSquare);
             image.setMinimumHeight(sideOfSquare);
@@ -99,6 +91,78 @@ public class Mode_2_to_3 extends AppCompatActivity {
             positions[random] = i / 2;
         }
 
+        for(int i = 0; i < size; i++)
+        {
+            childs[i].setClickable(false);
+        }
+
+        for(int i = 0; i < size; i++)
+        {
+            Drawable drawable = getResources().getDrawable(pictures[positions[i]]);
+            childs[i].setImageDrawable(drawable);
+        }
+
+        new CountDownTimer(2650, 1000) {
+
+            public void onTick(long millisUntilFinished)
+            {
+
+            }
+
+            public void onFinish()
+            {
+                for(int i = 0; i < size; i++)
+                {
+                    final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 0f, 90f);
+                    flip.setDuration(150);
+                    flip.start();
+                }
+
+                new CountDownTimer(150, 1000) {
+
+                    public void onTick(long millisUntilFinished)
+                    {
+
+                    }
+
+                    public void onFinish()
+                    {
+                        for(int i = 0; i < size; i++)
+                        {
+                            Drawable drawable = getResources().getDrawable(R.drawable.tarzan_logo);
+                            childs[i].setImageDrawable(drawable);
+                        }
+
+                        for(int i = 0; i < size; i++)
+                        {
+                            final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 270f, 360f);
+                            flip.setDuration(150);
+                            flip.start();
+                        }
+
+                        new CountDownTimer(150, 1000) {
+
+                            public void onTick(long millisUntilFinished)
+                            {
+
+                            }
+
+                            public void onFinish()
+                            {
+                                for(int i = 0; i < size; i++)
+                                {
+                                    childs[i].setClickable(true);
+                                }
+                            }
+
+                        }.start();
+
+                    }
+
+                }.start();
+            }
+
+        }.start();
 
     }
 
@@ -106,19 +170,17 @@ public class Mode_2_to_3 extends AppCompatActivity {
     {
         count++;
         ((ImageView)view).setClickable(false);
-        final GridLayout grid = (GridLayout) view.getParent();
         if(count % 2 == 0)
         {
-            for(int i = 0; i < grid.getChildCount(); i++)
+            for(int i = 0; i < size; i++)
             {
-                final ImageView image = (ImageView) grid.getChildAt(i);
-                image.setClickable(false);
+                childs[i].setClickable(false);
             }
         }
 
-        for(int i = 0; i < grid.getChildCount(); i++)
+        for(int i = 0; i < size; i++)
         {
-            final ImageView image = (ImageView) grid.getChildAt(i);
+            final ImageView image = childs[i];
             if(image == view)
             {
                 final ObjectAnimator flip = ObjectAnimator.ofFloat(image, "rotationY", 0f, 90f);
@@ -136,7 +198,7 @@ public class Mode_2_to_3 extends AppCompatActivity {
                     {
                         image.setImageDrawable(drawable);
                         ObjectAnimator flip1 = ObjectAnimator.ofFloat(image, "rotationY", 270f, 360f);
-                        flip1.setDuration(200);
+                        flip1.setDuration(150);
                         flip1.start();
                     }
 
@@ -156,13 +218,12 @@ public class Mode_2_to_3 extends AppCompatActivity {
             if(positions[k] == positions[opened])
             {
                 countPair += 2;
-                ImageView image = (ImageView) grid.getChildAt(k);
-                image.setClickable(false);
-                ImageView image1 = (ImageView) grid.getChildAt(opened);
-                image1.setClickable(false);
 
-                slideToTop(image);
-                slideToTop(image1);
+                childs[k].setClickable(false);
+                childs[opened].setClickable(false);
+
+                slideToTop(childs[k]);
+                slideToTop(childs[opened]);
 
                 found[k] = 1;
                 found[opened] = 1;
@@ -187,20 +248,16 @@ public class Mode_2_to_3 extends AppCompatActivity {
                     }.start();
                 }
 
-                for(int i = 0; i < grid.getChildCount(); i++)
+                for(int i = 0; i < size; i++)
                 {
-                    image = (ImageView) grid.getChildAt(i);
                     if(found[i] == 0)
-                        image.setClickable(true);
+                        childs[i].setClickable(true);
                 }
             }
             if(positions[k] != positions[opened])
             {
-                ImageView imageg = (ImageView) grid.getChildAt(k);
-                ImageView imageo = (ImageView) grid.getChildAt(opened);
-
-                imageg.setClickable(false);
-                imageo.setClickable(false);
+                childs[k].setClickable(false);
+                childs[opened].setClickable(false);
 
                 new CountDownTimer(1000, 1000) {
 
@@ -211,13 +268,13 @@ public class Mode_2_to_3 extends AppCompatActivity {
 
                     public void onFinish()
                     {
-                        final ImageView imagek = (ImageView) grid.getChildAt(k);
+                        final ImageView imagek = childs[k];
 
                         ObjectAnimator flip = ObjectAnimator.ofFloat(imagek, "rotationY", 0f, 90f);
                         flip.setDuration(150);
                         flip.start();
 
-                        final ImageView image1 = (ImageView) grid.getChildAt(opened);
+                        final ImageView image1 = childs[opened];
                         ObjectAnimator flip1 = ObjectAnimator.ofFloat(image1, "rotationY", 0f, 90f);
                         flip1.setDuration(150);
                         flip1.start();
@@ -242,11 +299,10 @@ public class Mode_2_to_3 extends AppCompatActivity {
                                 flip2.setDuration(150);
                                 flip2.start();
 
-                                for(int i = 0; i < grid.getChildCount(); i++)
+                                for(int i = 0; i < size; i++)
                                 {
-                                    final ImageView image = (ImageView) grid.getChildAt(i);
                                     if(found[i] == 0)
-                                        image.setClickable(true);
+                                        childs[i].setClickable(true);
                                 }
 
                                 new CountDownTimer(150, 1000) {
@@ -318,4 +374,103 @@ public class Mode_2_to_3 extends AppCompatActivity {
 
     }
 
+    /*@Override
+    protected void onResume() {
+        super.onResume();
+
+        for(int i = 0; i < size; i++)
+        {
+            final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 0f, 90f);
+            flip.setDuration(150);
+            flip.start();
+        }
+
+        new CountDownTimer(150, 1000) {
+
+            public void onTick(long millisUntilFinished)
+            {
+
+            }
+
+            public void onFinish()
+            {
+                for(int i = 0; i < size; i++)
+                {
+                    Drawable drawable = getResources().getDrawable(pictures[positions[i]]);
+                    childs[i].setImageDrawable(drawable);
+                }
+
+                for(int i = 0; i < size; i++)
+                {
+                    final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 270f, 360f);
+                    flip.setDuration(150);
+                    flip.start();
+                }
+
+                new CountDownTimer(4150, 1000) {
+
+                    public void onTick(long millisUntilFinished)
+                    {
+
+                    }
+
+                    public void onFinish()
+                    {
+                        for(int i = 0; i < size; i++)
+                        {
+                            final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 0f, 90f);
+                            flip.setDuration(150);
+                            flip.start();
+                        }
+
+                        new CountDownTimer(150, 1000) {
+
+                            public void onTick(long millisUntilFinished)
+                            {
+
+                            }
+
+                            public void onFinish()
+                            {
+                                for(int i = 0; i < size; i++)
+                                {
+                                    Drawable drawable = getResources().getDrawable(R.drawable.tarzan_logo);
+                                    childs[i].setImageDrawable(drawable);
+                                }
+
+                                for(int i = 0; i < size; i++)
+                                {
+                                    final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 270f, 360f);
+                                    flip.setDuration(150);
+                                    flip.start();
+                                }
+
+                                new CountDownTimer(150, 1000) {
+
+                                    public void onTick(long millisUntilFinished)
+                                    {
+
+                                    }
+
+                                    public void onFinish()
+                                    {
+                                        for(int i = 0; i < size; i++)
+                                        {
+                                            childs[i].setClickable(true);
+                                        }
+                                    }
+
+                                }.start();
+
+                            }
+
+                        }.start();
+                    }
+
+                }.start();
+            /*}
+
+        }.start();
+
+    }*/
 }

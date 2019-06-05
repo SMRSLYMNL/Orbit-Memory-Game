@@ -66,4 +66,29 @@ public class TarzanModes extends AppCompatActivity
         Intent intent = new Intent(getApplicationContext(), Mode_6_to_5.class);
         startActivity(intent);
     }
+
+    public void mode6to6(View view)
+    {
+        Intent intent = new Intent(getApplicationContext(), Mode_6_to_6.class);
+        startActivity(intent);
+    }
+
+    public void mode8to5(View view)
+    {
+        Intent intent = new Intent(getApplicationContext(), Mode_8_to_5.class);
+        startActivity(intent);
+    }
+
+    public void mode7to6(View view)
+    {
+        Intent intent = new Intent(getApplicationContext(), Mode_7_to_6.class);
+        startActivity(intent);
+    }
+
+    public void mode8to6(View view)
+    {
+        Intent intent = new Intent(getApplicationContext(), Mode_8_to_6.class);
+        startActivity(intent);
+    }
+
 }

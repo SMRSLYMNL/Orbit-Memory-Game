@@ -15,12 +15,12 @@ import android.widget.GridLayout;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-public class Mode_6_to_5 extends AppCompatActivity {
+public class Mode_8_to_6 extends AppCompatActivity {
 
     int count;
     int k;
     int opened = -1;
-    final int size = 30;
+    final int size = 48;
     int[] found = new int[size];
     int[] positions = new int[size];
     private int countPair = 0;
@@ -42,12 +42,21 @@ public class Mode_6_to_5 extends AppCompatActivity {
                     R.drawable.sabor_found_2,
                     R.drawable.trek_found_2,
                     R.drawable.jane_found_3,
-                    R.drawable.clayton_found_3
+                    R.drawable.clayton_found_3,
+                    R.drawable.tarzan_found_2,
+                    R.drawable.jane_found_5,
+                    R.drawable.archimedes_found_3,
+                    R.drawable.jane_found_4,
+                    R.drawable.trek_found_3,
+                    R.drawable.tarzan_found_3,
+                    R.drawable.tantor_found_2,
+                    R.drawable.sabor_found_3,
+                    R.drawable.archimedes_found_2
             };
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.mode_6_to_5);
+        setContentView(R.layout.mode_8_to_6);
 
         GridLayout gridLayout = findViewById(R.id.grid);
 
@@ -58,7 +67,7 @@ public class Mode_6_to_5 extends AppCompatActivity {
         }
 
         int actionBarHeight = 0;
-        final TypedArray styledAttributes = Mode_6_to_5.this.getTheme().obtainStyledAttributes(
+        final TypedArray styledAttributes = Mode_8_to_6.this.getTheme().obtainStyledAttributes(
                 new int[] { android.R.attr.actionBarSize }
         );
         actionBarHeight = (int) styledAttributes.getDimension(0, 0);
@@ -69,10 +78,10 @@ public class Mode_6_to_5 extends AppCompatActivity {
         int height = displayMetrics.heightPixels - actionBarHeight - statusBarHeight;
         int width = displayMetrics.widthPixels;
 
-        height -= dpToPx(24, Mode_6_to_5.this);
-        width -= dpToPx(20, Mode_6_to_5.this);
+        height -= dpToPx(16, Mode_8_to_6.this);
+        width -= dpToPx(12, Mode_8_to_6.this);
 
-        int sideOfSquare = Math.min(height / 6, width / 5);
+        int sideOfSquare = Math.min(height / 8, width / 6);
 
         for(int i = 0; i < gridLayout.getChildCount(); i++)
         {
@@ -112,7 +121,7 @@ public class Mode_6_to_5 extends AppCompatActivity {
             childs[i].setImageDrawable(drawable);
         }
 
-        new CountDownTimer(5050, 1000) {
+        new CountDownTimer(6850, 1000) {
 
             public void onTick(long millisUntilFinished)
             {
@@ -241,7 +250,7 @@ public class Mode_6_to_5 extends AppCompatActivity {
 
                 if(countPair == size)
                 {
-                    Toast.makeText(Mode_6_to_5.this, "CONGRATULATIONS!!!",Toast.LENGTH_SHORT).show();
+                    Toast.makeText(Mode_8_to_6.this, "CONGRATULATIONS!!!",Toast.LENGTH_SHORT).show();
 
                     new CountDownTimer(2000, 1000) {
 

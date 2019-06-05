@@ -67,21 +67,6 @@ public class Mode_6_to_4 extends AppCompatActivity {
         int height = displayMetrics.heightPixels - actionBarHeight - statusBarHeight;
         int width = displayMetrics.widthPixels;
 
-
-
-        /*Display display = getWindowManager().getDefaultDisplay();
-        DisplayMetrics outMetrics = new DisplayMetrics ();
-        display.getMetrics(outMetrics);
-
-        int density  = getResources().getDisplayMetrics().densityDpi;
-        int dpHeight = outMetrics.heightPixels / density;
-        int dpWidth  = outMetrics.widthPixels / density;*/
-
-        //height -= dpToPx(4, Mode_6_to_4.this);
-        //width -= dpToPx(4, Mode_6_to_4.this);
-
-
-
         height -= dpToPx(24, Mode_6_to_4.this);
         width -= dpToPx(16, Mode_6_to_4.this);
 
@@ -114,6 +99,78 @@ public class Mode_6_to_4 extends AppCompatActivity {
             positions[random] = i / 2;
         }
 
+        for(int i = 0; i < size; i++)
+        {
+            childs[i].setClickable(false);
+        }
+
+        for(int i = 0; i < size; i++)
+        {
+            Drawable drawable = getResources().getDrawable(pictures[positions[i]]);
+            childs[i].setImageDrawable(drawable);
+        }
+
+        new CountDownTimer(4450, 1000) {
+
+            public void onTick(long millisUntilFinished)
+            {
+
+            }
+
+            public void onFinish()
+            {
+                for(int i = 0; i < size; i++)
+                {
+                    final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 0f, 90f);
+                    flip.setDuration(150);
+                    flip.start();
+                }
+
+                new CountDownTimer(150, 1000) {
+
+                    public void onTick(long millisUntilFinished)
+                    {
+
+                    }
+
+                    public void onFinish()
+                    {
+                        for(int i = 0; i < size; i++)
+                        {
+                            Drawable drawable = getResources().getDrawable(R.drawable.tarzan_logo);
+                            childs[i].setImageDrawable(drawable);
+                        }
+
+                        for(int i = 0; i < size; i++)
+                        {
+                            final ObjectAnimator flip = ObjectAnimator.ofFloat(childs[i], "rotationY", 270f, 360f);
+                            flip.setDuration(150);
+                            flip.start();
+                        }
+
+                        new CountDownTimer(150, 1000) {
+
+                            public void onTick(long millisUntilFinished)
+                            {
+
+                            }
+
+                            public void onFinish()
+                            {
+                                for(int i = 0; i < size; i++)
+                                {
+                                    childs[i].setClickable(true);
+                                }
+                            }
+
+                        }.start();
+
+                    }
+
+                }.start();
+            }
+
+        }.start();
 
     }
 
