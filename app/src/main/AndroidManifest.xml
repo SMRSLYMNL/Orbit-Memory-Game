@@ -13,6 +13,7 @@
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         <activity android:name=".InGame" android:screenOrientation="portrait"/>
         <activity android:name=".Modes" android:screenOrientation="portrait"/>
+        <activity android:name=".Levels" android:screenOrientation="portrait"/>
         <activity android:name=".MainActivity" android:screenOrientation="portrait">
 
             <intent-filter>

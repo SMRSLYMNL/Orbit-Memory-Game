@@ -4,7 +4,7 @@ import android.content.Intent;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.view.View;
 import android.widget.Button;
@@ -254,30 +254,4 @@ public class Modes extends AppCompatActivity
         startActivity(intent);
         finish();
     }
-
-    /*
-
-
-    public void mode8to5(View view)
-    {
-        Intent intent = new Intent(getApplicationContext(), Mode_8_to_5.class);
-        startActivity(intent);
-        finish();
-    }
-
-    public void mode7to6(View view)
-    {
-        Intent intent = new Intent(getApplicationContext(), Mode_7_to_6.class);
-        startActivity(intent);
-        finish();
-    }
-
-    public void mode8to6(View view)
-    {
-        Intent intent = new Intent(getApplicationContext(), Mode_8_to_6.class);
-        startActivity(intent);
-        finish();
-    }
-
-    */
 }
