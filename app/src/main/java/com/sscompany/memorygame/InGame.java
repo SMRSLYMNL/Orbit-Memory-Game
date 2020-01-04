@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
@@ -23,6 +24,12 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Locale;
 
 public class InGame extends Activity
@@ -34,6 +41,11 @@ public class InGame extends Activity
     private long mTimeLeftInMillis;
 
     private TextView moves;
+
+    private int width;
+    private int height;
+
+    private Context mContext;
 
     private boolean gameOrNot = false;
 
@@ -49,93 +61,43 @@ public class InGame extends Activity
     private int countPair = 0;
     private int numberOfMoves = 0;
 
-    private int columnCount;
+    private int level;
     private int rowCount;
+    private int columnCount;
+    private int numberOfElements;
+    private int numberOfPairs;
+    private int numberOfFours;
+    private int numberOfBombs;
     private String type;
 
     private int size;
     private int sideOfSquare;
     private int marginOfSquare;
-    private int bombPosition;
+    private int bombPosition1 = -1;
+    private int bombPosition2 = -1;
 
     private float imageRadius;
 
+    private SharedPreferences levelData;
+    private SharedPreferences.Editor levelDataEditor;
+    private String levelDataKey;
+    private ArrayList<String> levelArray;
+
+    private final ArrayList<String> defaultLevelArray = new ArrayList<String>(Arrays.asList(
+            "1", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0", "0",
+            "0", "0", "0", "0", "0", "0", "0", "0", "0",
+            "0", "0", "0", "0", "0", "0", "0", "0", "0"));
 
     private int[] found;
     private int[] positions;
+    private int[] pictureUsed;
 
-    private ImageView childs[];
-
-    private final int[][] allPictures = new int[][]
-            {
-                    {
-                            R.drawable.apple,
-                            R.drawable.pear,
-                            R.drawable.pomegranate,
-                            R.drawable.banana,
-                            R.drawable.orange,
-                            R.drawable.strawberry,
-                            R.drawable.cherry,
-                            R.drawable.kiwi,
-                            R.drawable.grape,
-                            R.drawable.plum,
-                            R.drawable.apricot,
-                            R.drawable.lime,
-                            R.drawable.bomb
-                    },
-                    {
-                            R.drawable.lion,
-                            R.drawable.camel,
-                            R.drawable.cow,
-                            R.drawable.tiger,
-                            R.drawable.bear,
-                            R.drawable.elephant,
-                            R.drawable.rhinoceros,
-                            R.drawable.zebra,
-                            R.drawable.lemur,
-                            R.drawable.deer,
-                            R.drawable.sheep,
-                            R.drawable.wolf,
-                            R.drawable.bomb
-                    },
-                    {
-                            R.drawable.bmw,
-                            R.drawable.cadillac,
-                            R.drawable.lamborghini,
-                            R.drawable.volkswagen,
-                            R.drawable.ford,
-                            R.drawable.mazda,
-                            R.drawable.nissan,
-                            R.drawable.ferrari,
-                            R.drawable.porsche,
-                            R.drawable.seat,
-                            R.drawable.chevrolet,
-                            R.drawable.mercedes,
-                            R.drawable.bomb
-                    },
-                    {
-                            R.drawable.azerbaijan,
-                            R.drawable.turkey,
-                            R.drawable.russia,
-                            R.drawable.united_states,
-                            R.drawable.japan,
-                            R.drawable.germany,
-                            R.drawable.canada,
-                            R.drawable.united_kingdom,
-                            R.drawable.china,
-                            R.drawable.spain,
-                            R.drawable.brazil,
-                            R.drawable.argentina,
-                            R.drawable.bomb
-                    }
-            };
+    private ImageView[] childs;
 
     private int[] pictures = new int[]{};
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////
     //////////////////////////////////////MAIN FUNCTION/////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     @Override
@@ -144,29 +106,48 @@ public class InGame extends Activity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.in_game);
 
+        //Initialization context
+        mContext = InGame.this;
+
+        //Data Initialization
+        Data data = new Data();
+
         //Getting Ancestor
-
         Intent ancestorIntent = getIntent();
-        System.out.println(ancestorIntent + "   Ancestor Intent");
 
-        columnCount = ancestorIntent.getIntExtra("column", 1);
-        rowCount = ancestorIntent.getIntExtra("row", 1);
+        //Getting IntentExtras
+        level = ancestorIntent.getIntExtra("level", 0);
         type = ancestorIntent.getStringExtra("type");
 
-        WAITING_TIME_IN_MILLIS = (long)((double)((columnCount + rowCount)/2) * 1000);
+        //Shared Preferences
+        levelDataKey = type + "_availability";
+
+        levelData = mContext.getSharedPreferences(levelDataKey, 0);
+        levelDataEditor = levelData.edit();
+
+        //Initializing levelArray
+        levelArray = getLevels(levelDataKey);
+
+        System.out.println(levelDataKey);
+        System.out.println(levelArray);
+
+        //Getting Dimensions
+        rowCount = data.getLevelDimensionX(level);
+        columnCount = data.getLevelDimensionY(level);
+        numberOfBombs = data.getLevelNumberOfBombs(level);
+        numberOfElements = data.getLevelNumberOfUniqueElements(level);
+        numberOfPairs = data.getLevelNumberOfPairs(level);
+        numberOfFours = data.getLevelNumberOfFours(level);
+
+        //Setting waiting and start time
+        WAITING_TIME_IN_MILLIS = (long)((double)((rowCount + columnCount)/2) * 1000);
         START_TIME_IN_MILLIS = columnCount * rowCount * 3000;
 
+        //Initializing timer
         mTimeLeftInMillis = WAITING_TIME_IN_MILLIS;
 
-        if(type.equals("food"))
-            pictures = allPictures[0];
-        else if(type.equals("animal"))
-            pictures = allPictures[1];
-        else if(type.equals("car_logo"))
-            pictures = allPictures[2];
-        else if(type.equals("flag"))
-            pictures = allPictures[3];
-
+        //Getting pictures according to type
+        pictures = data.getPictures(type);
 
         System.out.println("Row: " + rowCount + " Column: " + columnCount);
 
@@ -175,6 +156,7 @@ public class InGame extends Activity
 
         found = new int[size];
         positions = new int[size];
+        pictureUsed = new int[size];
 
         childs = new ImageView[size];
 
@@ -192,7 +174,6 @@ public class InGame extends Activity
         pauseButton = findViewById(R.id.button_pause);
         restartButton= findViewById(R.id.button_restart);
         exitButton = findViewById(R.id.button_exit);
-
 
         //Setting Clickable to Toolbar Buttons
 
@@ -235,7 +216,6 @@ public class InGame extends Activity
         int height = displayMetrics.heightPixels - actionBarHeight - statusBarHeight - navigationBarHeight;
         int width = displayMetrics.widthPixels;
 
-
         //Getting ImageViews' Size
 
         marginOfSquare = width / 200;
@@ -248,46 +228,154 @@ public class InGame extends Activity
         //Initializing imageRadius
         imageRadius = sideOfSquare / 2;
 
-        //marginOfSquare = dpToPx(marginOfSquare, this);
-
         //Setting Image Positions
 
         for(int i = 0; i < size; i++)
         {
             positions[i] = -1;
             found[i] = 0;
+            pictureUsed[i] = -1;
         }
 
-        int random;
+        int randomForImage;
+        int randomForPosition;
 
-        if(size % 2 == 1)
+        if(numberOfBombs == 0)
         {
-            countPair = 1;
-            random = (int)(Math.random() * size);
-            positions[random] = 12;
-
-            bombPosition = random;
-
-            for(int i = 0; i < size - 1; i++)
+            for(int i = 0; i < numberOfFours; i++)
             {
-                random = (int)(Math.random() * size);
-                while(positions[random] != -1)
+                randomForImage = (int)(Math.random() * numberOfElements);
+                while(pictureUsed[randomForImage] != -1)
+                    randomForImage = (int)(Math.random() * numberOfElements);
+
+                pictureUsed[randomForImage] = 1;
+
+                for(int j = 0; j < 4; j++)
                 {
-                    random = (int)(Math.random() * size);
+                    randomForPosition = (int)(Math.random() * size);
+                    while(positions[randomForPosition] != -1)
+                        randomForPosition = (int)(Math.random() * size);
+
+                    positions[randomForPosition] = randomForImage;
                 }
-                positions[random] = i / 2;
+            }
+
+            for(int i = 0; i < numberOfPairs; i++)
+            {
+                randomForImage = (int)(Math.random() * numberOfElements);
+                while(pictureUsed[randomForImage] != -1)
+                    randomForImage = (int)(Math.random() * numberOfElements);
+
+                pictureUsed[randomForImage] = 1;
+
+                for(int j = 0; j < 2; j++)
+                {
+                    randomForPosition = (int)(Math.random() * size);
+                    while(positions[randomForPosition] != -1)
+                        randomForPosition = (int)(Math.random() * size);
+
+                    positions[randomForPosition] = randomForImage;
+                }
             }
         }
-        else
+        else if(numberOfBombs == 1)
         {
-            for(int i = 0; i < size; i++)
+            countPair = 1;
+
+            //Getting position of first bomb
+            randomForImage = (int)(Math.random() * size);
+
+            positions[randomForImage] = 12;
+            bombPosition1 = randomForImage;
+
+            for(int i = 0; i < numberOfFours; i++)
             {
-                random = (int)(Math.random() * size);
-                while(positions[random] != -1)
+                randomForImage = (int)(Math.random() * numberOfElements);
+                while(pictureUsed[randomForImage] != -1)
+                    randomForImage = (int)(Math.random() * numberOfElements);
+
+                pictureUsed[randomForImage] = 1;
+
+                for(int j = 0; j < 4; j++)
                 {
-                    random = (int)(Math.random() * size);
+                    randomForPosition = (int)(Math.random() * size);
+                    while(positions[randomForPosition] != -1)
+                        randomForPosition = (int)(Math.random() * size);
+
+                    positions[randomForPosition] = randomForImage;
                 }
-                positions[random] = i / 2;
+            }
+
+            for(int i = 0; i < numberOfPairs; i++)
+            {
+                randomForImage = (int)(Math.random() * numberOfElements);
+                while(pictureUsed[randomForImage] != -1)
+                    randomForImage = (int)(Math.random() * numberOfElements);
+
+                pictureUsed[randomForImage] = 1;
+
+                for(int j = 0; j < 2; j++)
+                {
+                    randomForPosition = (int)(Math.random() * size);
+                    while(positions[randomForPosition] != -1)
+                        randomForPosition = (int)(Math.random() * size);
+
+                    positions[randomForPosition] = randomForImage;
+                }
+            }
+        }
+        else if(numberOfBombs == 2)
+        {
+            countPair = 2;
+
+            //Getting position of first bomb
+            randomForImage = (int)(Math.random() * size);
+
+            positions[randomForImage] = 12;
+            bombPosition1 = randomForImage;
+
+            //Getting position of second bomb
+            randomForImage = (int)(Math.random() * size);
+            while(positions[randomForImage] != -1)
+                randomForImage = (int)(Math.random() * size);
+
+            positions[randomForImage] = 12;
+            bombPosition2 = randomForImage;
+
+            for(int i = 0; i < numberOfFours; i++)
+            {
+                randomForImage = (int)(Math.random() * numberOfElements);
+                while(pictureUsed[randomForImage] != -1)
+                    randomForImage = (int)(Math.random() * numberOfElements);
+
+                pictureUsed[randomForImage] = 1;
+
+                for(int j = 0; j < 4; j++)
+                {
+                    randomForPosition = (int)(Math.random() * size);
+                    while(positions[randomForPosition] != -1)
+                        randomForPosition = (int)(Math.random() * size);
+
+                    positions[randomForPosition] = randomForImage;
+                }
+            }
+
+            for(int i = 0; i < numberOfPairs; i++)
+            {
+                randomForImage = (int)(Math.random() * numberOfElements);
+                while(pictureUsed[randomForImage] != -1)
+                    randomForImage = (int)(Math.random() * numberOfElements);
+
+                pictureUsed[randomForImage] = 1;
+
+                for(int j = 0; j < 2; j++)
+                {
+                    randomForPosition = (int)(Math.random() * size);
+                    while(positions[randomForPosition] != -1)
+                        randomForPosition = (int)(Math.random() * size);
+
+                    positions[randomForPosition] = randomForImage;
+                }
             }
         }
 
@@ -318,7 +406,6 @@ public class InGame extends Activity
             image.setMaxHeight(sideOfSquare);
             image.setMinimumHeight(sideOfSquare);
 
-
             image.setOnClickListener(imageClicked);
             image.setClickable(false);
 
@@ -333,13 +420,12 @@ public class InGame extends Activity
             childs[i] = (ImageView) gridLayout.getChildAt(i);
         }
 
-
         //Setting and Starting Timer
 
         updateCountDownText();
         startTimer();
 
-        if(columnCount * rowCount % 2 == 1)
+        if(numberOfBombs != 0)
         {
             pauseTimer();
 
@@ -348,8 +434,8 @@ public class InGame extends Activity
 
                 //Drawable drawable = getResources().getDrawable();
 
-                Bitmap batmapBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unfound);
-                RoundedBitmapDrawable circularBitmapDrawable = RoundedBitmapDrawableFactory.create(getResources(), batmapBitmap);
+                Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unfound);
+                RoundedBitmapDrawable circularBitmapDrawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
 
                 circularBitmapDrawable.setCornerRadius(imageRadius);
 
@@ -385,8 +471,8 @@ public class InGame extends Activity
 
                                     for(int i = 0; i < size; i++)
                                     {
-                                        Bitmap batmapBitmap = BitmapFactory.decodeResource(getResources(), pictures[positions[i]]);
-                                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), batmapBitmap);
+                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), pictures[positions[i]]);
+                                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
 
                                         drawable.setCornerRadius(imageRadius);
                                         childs[i].setImageDrawable(drawable);
@@ -420,18 +506,12 @@ public class InGame extends Activity
 
             alertDialog = builder.create();
             alertDialog.show();
-
-
         }
     }
 
 
-
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
     /////////////////////////////////////OTHER FUNCTIONS////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////////////////////
 
     public View.OnClickListener imageClicked  = new View.OnClickListener()
@@ -439,9 +519,24 @@ public class InGame extends Activity
         @Override
         public void onClick(final View view)
         {
-            final ImageView bombImage = childs[bombPosition];
+            boolean bombCheck = false;
 
-            if(view == bombImage && size % 2 == 1)
+            if(bombPosition1 != -1 && bombPosition2 != -1)
+            {
+                final ImageView bombImage1 = childs[bombPosition1];
+                final ImageView bombImage2 = childs[bombPosition2];
+
+                bombCheck = (view == bombImage1) || (view == bombImage2);
+            }
+
+            else if(bombPosition1 != -1)
+            {
+                final ImageView bombImage1 = childs[bombPosition1];
+
+                bombCheck = (view == bombImage1);
+            }
+
+            if(bombCheck)
             {
                 view.setClickable(false);
                 for(int i = 0; i < size; i++)
@@ -462,8 +557,8 @@ public class InGame extends Activity
 
                     public void onFinish()
                     {
-                        Bitmap batmapBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.boom);
-                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), batmapBitmap);
+                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.boom);
+                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
 
                         drawable.setCornerRadius(imageRadius);
                         ((ImageView)view).setImageDrawable(drawable);
@@ -503,57 +598,9 @@ public class InGame extends Activity
                                                     public void onClick(DialogInterface dialog, int which)
                                                     {
                                                         Intent intent = new Intent(getApplicationContext(), InGame.class);
-                                                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-
-                                                        if(rowCount == 3 && columnCount == 2)
-                                                        {
-                                                            intent.putExtra("column", 2);
-                                                            intent.putExtra("row", 3);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-                                                        else if(rowCount == 4 && columnCount == 3)
-                                                        {
-                                                            intent.putExtra("column", 3);
-                                                            intent.putExtra("row", 4);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-                                                        else if(rowCount == 4 && columnCount == 4)
-                                                        {
-                                                            intent.putExtra("column", 4);
-                                                            intent.putExtra("row", 4);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-                                                        else if(rowCount == 5 && columnCount == 4)
-                                                        {
-                                                            intent.putExtra("column", 4);
-                                                            intent.putExtra("row", 5);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-                                                        else if(rowCount == 6 && columnCount == 4)
-                                                        {
-                                                            intent.putExtra("column", 4);
-                                                            intent.putExtra("row", 6);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-                                                        else if(rowCount == 3 && columnCount == 3)
-                                                        {
-                                                            intent.putExtra("column", 3);
-                                                            intent.putExtra("row", 3);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-                                                        else if(rowCount == 5 && columnCount == 3)
-                                                        {
-                                                            intent.putExtra("column", 3);
-                                                            intent.putExtra("row", 5);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-                                                        else if(rowCount == 5 && columnCount == 5)
-                                                        {
-                                                            intent.putExtra("column", 5);
-                                                            intent.putExtra("row", 5);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                        }
-
+                                                        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                        intent.putExtra("type", type);
+                                                        intent.putExtra("level", level);
                                                         startActivity(intent);
                                                         finish();
                                                     }
@@ -561,10 +608,11 @@ public class InGame extends Activity
                                                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
                                                     public void onClick(DialogInterface dialog, int which)
                                                     {
-                                                        Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
+                                                        Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                        intent.putExtra("type", type);
                                                         startActivity(intent);
+                                                        finish();
                                                     }
                                                 })
                                                 .setIcon(android.R.drawable.ic_dialog_alert)
@@ -605,8 +653,8 @@ public class InGame extends Activity
                         final ObjectAnimator flip = ObjectAnimator.ofFloat(image, "rotationY", 0f, 90f);
                         flip.setDuration(150);
                         flip.start();
-                        Bitmap batmapBitmap = BitmapFactory.decodeResource(getResources(), pictures[positions[i]]);
-                        final RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), batmapBitmap);
+                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), pictures[positions[i]]);
+                        final RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
 
                         drawable.setCornerRadius(imageRadius);
 
@@ -657,14 +705,30 @@ public class InGame extends Activity
                         if(countPair == size) {
                             pauseTimer();
 
+                            //Saving to SharedPreferences
+                            levelArray = getLevels(levelDataKey);
+                            levelArray.set(level, "2");
+
+                            if(level != 32)
+                            {
+                                levelArray.set(level + 1, "1");
+                            }
+
+                            System.out.println(level);
+                            System.out.println(levelArray);
+
+                            saveLevels(levelArray, levelDataKey);
+
+                            //Todo: Add lock to categories
+
                             for(int i = 0; i < size; i ++)
                             {
                                 childs[i].setClickable(false);
                             }
 
-                            if(size % 2 == 1)
+                            if(numberOfBombs == 1)
                             {
-                                final ImageView imageBomb = childs[bombPosition];
+                                final ImageView imageBomb = childs[bombPosition1];
 
                                 ObjectAnimator flip1 = ObjectAnimator.ofFloat(imageBomb, "rotationY", 0f, 90f);
                                 flip1.setDuration(150);
@@ -680,8 +744,8 @@ public class InGame extends Activity
                                     public void onFinish()
                                     {
 
-                                        Bitmap batmapBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bomb);
-                                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), batmapBitmap);
+                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bomb);
+                                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
 
                                         drawable.setCornerRadius(imageRadius);
                                         imageBomb.setImageDrawable(drawable);
@@ -702,101 +766,17 @@ public class InGame extends Activity
 
                                                 AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(InGame.this, R.style.myDialog));
 
-                                                if (rowCount == 5 && columnCount == 5)
+                                                if (level == 32)
                                                 {
                                                     builder.setTitle("CONGRATULATIONS!!!")
-                                                            .setMessage("You finished the level in " + numberOfMoves + " moves!\n")
+                                                            .setMessage("You finished the " + (level + 1) + ". Level in " + numberOfMoves + " moves!\n")
                                                             .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                                                 public void onClick(DialogInterface dialog, int which)
                                                                 {
-                                                                    Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                                    intent.putExtra("type", getIntent().getStringExtra("type"));
+                                                                    Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                                    intent.putExtra("type", type);
 
-                                                                    startActivity(intent);
-                                                                }
-                                                            })
-                                                            .setIcon(R.drawable.congratulations_icon)
-                                                            .setCancelable(true);
-
-                                                    builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
-                                                        @Override
-                                                        public void onCancel(DialogInterface dialog)
-                                                        {
-                                                            Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
-
-                                                            startActivity(intent);
-                                                        }
-                                                    });
-
-                                                    alertDialog = builder.create();
-                                                    alertDialog.show();
-                                                }
-
-                                                else
-                                                {
-                                                    builder.setTitle("CONGRATULATIONS!!!")
-                                                            .setMessage("You finished the level in " + numberOfMoves + " moves!\nDo you want to continue to the next level?")
-                                                            .setPositiveButton("Continue", new DialogInterface.OnClickListener() {
-                                                                public void onClick(DialogInterface dialog, int which)
-                                                                {
-                                                                    Intent intent = new Intent(getApplicationContext(), InGame.class);
-                                                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-
-                                                                    if(rowCount == 3 && columnCount == 2)
-                                                                    {
-                                                                        intent.putExtra("column", 3);
-                                                                        intent.putExtra("row", 4);
-                                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                                    }
-                                                                    else if(rowCount == 4 && columnCount == 3)
-                                                                    {
-                                                                        intent.putExtra("column", 4);
-                                                                        intent.putExtra("row", 4);
-                                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                                    }
-                                                                    else if(rowCount == 4 && columnCount == 4)
-                                                                    {
-                                                                        intent.putExtra("column", 4);
-                                                                        intent.putExtra("row", 5);
-                                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                                    }
-                                                                    else if(rowCount == 5 && columnCount == 4)
-                                                                    {
-                                                                        intent.putExtra("column", 4);
-                                                                        intent.putExtra("row", 6);
-                                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                                    }
-                                                                    else if(rowCount == 6 && columnCount == 4)
-                                                                    {
-                                                                        intent.putExtra("column", 3);
-                                                                        intent.putExtra("row", 3);
-                                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                                    }
-                                                                    else if(rowCount == 3 && columnCount == 3)
-                                                                    {
-                                                                        intent.putExtra("column", 3);
-                                                                        intent.putExtra("row", 5);
-                                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                                    }
-                                                                    else if(rowCount == 5 && columnCount == 3)
-                                                                    {
-                                                                        intent.putExtra("column", 5);
-                                                                        intent.putExtra("row", 5);
-                                                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                                    }
-
-                                                                    startActivity(intent);
-                                                                }
-                                                            })
-                                                            .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                                                                @Override
-                                                                public void onClick(DialogInterface dialog, int which) {
-                                                                    Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                                    intent.putExtra("type", getIntent().getStringExtra("type"));
                                                                     startActivity(intent);
                                                                     finish();
                                                                 }
@@ -808,11 +788,196 @@ public class InGame extends Activity
                                                         @Override
                                                         public void onCancel(DialogInterface dialog)
                                                         {
-                                                            Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
+                                                            Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                            intent.putExtra("type", type);
 
                                                             startActivity(intent);
+                                                            finish();
+                                                        }
+                                                    });
+
+                                                    alertDialog = builder.create();
+                                                    alertDialog.show();
+                                                }
+
+                                                else
+                                                {
+                                                    builder.setTitle("CONGRATULATIONS!!!")
+                                                            .setMessage("You finished the " + (level + 1) + ". Level in " + numberOfMoves + " moves!\nDo you want to continue to the next level?")
+                                                            .setPositiveButton("Continue", new DialogInterface.OnClickListener() {
+                                                                public void onClick(DialogInterface dialog, int which)
+                                                                {
+                                                                    Intent intent = new Intent(getApplicationContext(), InGame.class);
+                                                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                                    intent.putExtra("level", level + 1);
+                                                                    intent.putExtra("type", type);
+
+                                                                    startActivity(intent);
+                                                                    finish();
+                                                                }
+                                                            })
+                                                            .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                                                @Override
+                                                                public void onClick(DialogInterface dialog, int which) {
+                                                                    Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                                    intent.putExtra("type", type);
+                                                                    startActivity(intent);
+                                                                    finish();
+                                                                }
+                                                            })
+                                                            .setIcon(R.drawable.congratulations_icon)
+                                                            .setCancelable(true);
+
+                                                    builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                                                        @Override
+                                                        public void onCancel(DialogInterface dialog)
+                                                        {
+                                                            Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                            intent.putExtra("type", type);
+
+                                                            startActivity(intent);
+                                                            finish();
+                                                        }
+                                                    });
+
+                                                }
+
+                                                alertDialog = builder.create();
+                                                alertDialog.show();
+                                            }
+
+                                        }.start();
+                                    }
+                                }.start();
+                            }
+                            else if(numberOfBombs == 2)
+                            {
+                                final ImageView imageBomb1 = childs[bombPosition1];
+                                final ImageView imageBomb2 = childs[bombPosition2];
+
+                                ObjectAnimator flip1 = ObjectAnimator.ofFloat(imageBomb1, "rotationY", 0f, 90f);
+                                flip1.setDuration(150);
+                                flip1.start();
+
+                                ObjectAnimator flip2 = ObjectAnimator.ofFloat(imageBomb2, "rotationY", 0f, 90f);
+                                flip2.setDuration(150);
+                                flip2.start();
+
+                                new CountDownTimer(150, 1000)
+                                {
+                                    public void onTick(long millisUntilFinished)
+                                    {
+
+                                    }
+
+                                    public void onFinish()
+                                    {
+
+                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.bomb);
+                                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
+
+                                        drawable.setCornerRadius(imageRadius);
+                                        imageBomb1.setImageDrawable(drawable);
+
+                                        ObjectAnimator flip1 = ObjectAnimator.ofFloat(imageBomb1, "rotationY", 270f, 360f);
+                                        flip1.setDuration(150);
+                                        flip1.start();
+
+                                        imageBomb2.setImageDrawable(drawable);
+
+                                        ObjectAnimator flip2 = ObjectAnimator.ofFloat(imageBomb2, "rotationY", 270f, 360f);
+                                        flip2.setDuration(150);
+                                        flip2.start();
+
+                                        new CountDownTimer(650, 1000)
+                                        {
+                                            public void onTick(long millisUntilFinished) {}
+
+                                            public void onFinish()
+                                            {
+
+                                                if (alertDialog != null)
+                                                    alertDialog.dismiss();
+
+                                                AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(InGame.this, R.style.myDialog));
+
+                                                if (level == 32)
+                                                {
+                                                    builder.setTitle("CONGRATULATIONS!!!")
+                                                            .setMessage("You finished the " + (level + 1) + ". Level in " + numberOfMoves + " moves!\n")
+                                                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                                                public void onClick(DialogInterface dialog, int which)
+                                                                {
+                                                                    Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                                    intent.putExtra("type", type);
+
+                                                                    startActivity(intent);
+                                                                    finish();
+                                                                }
+                                                            })
+                                                            .setIcon(R.drawable.congratulations_icon)
+                                                            .setCancelable(true);
+
+                                                    builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                                                        @Override
+                                                        public void onCancel(DialogInterface dialog)
+                                                        {
+                                                            Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                            intent.putExtra("type", type);
+
+                                                            startActivity(intent);
+                                                            finish();
+                                                        }
+                                                    });
+
+                                                    alertDialog = builder.create();
+                                                    alertDialog.show();
+                                                }
+
+                                                else
+                                                {
+                                                    builder.setTitle("CONGRATULATIONS!!!")
+                                                            .setMessage("You finished the " + (level + 1) + ". Level in " + numberOfMoves + " moves!\nDo you want to continue to the next level?")
+                                                            .setPositiveButton("Continue", new DialogInterface.OnClickListener() {
+                                                                public void onClick(DialogInterface dialog, int which)
+                                                                {
+                                                                    Intent intent = new Intent(getApplicationContext(), InGame.class);
+                                                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                                    intent.putExtra("level", level + 1);
+                                                                    intent.putExtra("type", type);
+
+                                                                    startActivity(intent);
+                                                                    finish();
+                                                                }
+                                                            })
+                                                            .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                                                                @Override
+                                                                public void onClick(DialogInterface dialog, int which) {
+                                                                    Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                                    intent.putExtra("type", type);
+                                                                    startActivity(intent);
+                                                                    finish();
+                                                                }
+                                                            })
+                                                            .setIcon(R.drawable.congratulations_icon)
+                                                            .setCancelable(true);
+
+                                                    builder.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                                                        @Override
+                                                        public void onCancel(DialogInterface dialog)
+                                                        {
+                                                            Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                            intent.putExtra("type", type);
+
+                                                            startActivity(intent);
+                                                            finish();
                                                         }
                                                     });
 
@@ -843,18 +1008,19 @@ public class InGame extends Activity
 
                                         AlertDialog.Builder builder = new AlertDialog.Builder(new ContextThemeWrapper(InGame.this, R.style.myDialog));
 
-                                        if (rowCount == 5 && columnCount == 5)
+                                        if (level == 32)
                                         {
                                             builder.setTitle("CONGRATULATIONS!!!")
-                                                    .setMessage("You finished the level in " + numberOfMoves + " moves!\n")
+                                                    .setMessage("You finished the " + (level + 1) + ". Level in " + numberOfMoves + " moves!\n")
                                                     .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                                         public void onClick(DialogInterface dialog, int which)
                                                         {
-                                                            Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
+                                                            Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                            intent.putExtra("type", type);
 
                                                             startActivity(intent);
+                                                            finish();
                                                         }
                                                     })
                                                     .setIcon(R.drawable.congratulations_icon)
@@ -867,65 +1033,26 @@ public class InGame extends Activity
                                         else
                                         {
                                             builder.setTitle("CONGRATULATIONS!!!")
-                                                    .setMessage("You finished the level in " + numberOfMoves + " moves!\nDo you want to continue to the next level?")
+                                                    .setMessage("You finished the " + (level + 1) + ". Level in " + numberOfMoves + " moves!\nDo you want to continue to the next level?")
                                                     .setPositiveButton("Continue", new DialogInterface.OnClickListener() {
                                                         public void onClick(DialogInterface dialog, int which)
                                                         {
                                                             Intent intent = new Intent(getApplicationContext(), InGame.class);
-                                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
-                                                            if(rowCount == 3 && columnCount == 2)
-                                                            {
-                                                                intent.putExtra("column", 3);
-                                                                intent.putExtra("row", 4);
-                                                                intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                            }
-                                                            else if(rowCount == 4 && columnCount == 3)
-                                                            {
-                                                                intent.putExtra("column", 4);
-                                                                intent.putExtra("row", 4);
-                                                                intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                            }
-                                                            else if(rowCount == 4 && columnCount == 4)
-                                                            {
-                                                                intent.putExtra("column", 4);
-                                                                intent.putExtra("row", 5);
-                                                                intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                            }
-                                                            else if(rowCount == 5 && columnCount == 4)
-                                                            {
-                                                                intent.putExtra("column", 4);
-                                                                intent.putExtra("row", 6);
-                                                                intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                            }
-                                                            else if(rowCount == 6 && columnCount == 4)
-                                                            {
-                                                                intent.putExtra("column", 3);
-                                                                intent.putExtra("row", 3);
-                                                                intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                            }
-                                                            else if(rowCount == 3 && columnCount == 3)
-                                                            {
-                                                                intent.putExtra("column", 3);
-                                                                intent.putExtra("row", 5);
-                                                                intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                            }
-                                                            else if(rowCount == 5 && columnCount == 3)
-                                                            {
-                                                                intent.putExtra("column", 5);
-                                                                intent.putExtra("row", 5);
-                                                                intent.putExtra("type", getIntent().getStringExtra("type"));
-                                                            }
+                                                            intent.putExtra("level", level + 1);
+                                                            intent.putExtra("type", type);
 
                                                             startActivity(intent);
+                                                            finish();
                                                         }
                                                     })
                                                     .setNegativeButton("No", new DialogInterface.OnClickListener() {
                                                         @Override
                                                         public void onClick(DialogInterface dialog, int which) {
-                                                            Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                                            intent.putExtra("type", getIntent().getStringExtra("type"));
+                                                            Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                                            //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                                            intent.putExtra("type", type);
                                                             startActivity(intent);
                                                             finish();
                                                         }
@@ -984,8 +1111,8 @@ public class InGame extends Activity
                                     {
                                         //Drawable drawable = getResources().getDrawable(R.drawable.unfound);
 
-                                        Bitmap batmapBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unfound);
-                                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), batmapBitmap);
+                                        Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unfound);
+                                        RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
 
                                         drawable.setCornerRadius(imageRadius);;
                                         imagek.setImageDrawable(drawable);
@@ -1083,58 +1210,12 @@ public class InGame extends Activity
                     public void onClick(DialogInterface dialog, int which)
                     {
                         Intent intent = new Intent(getApplicationContext(), InGame.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-
-                        if(rowCount == 3 && columnCount == 2)
-                        {
-                            intent.putExtra("column", 2);
-                            intent.putExtra("row", 3);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
-                        else if(rowCount == 4 && columnCount == 3)
-                        {
-                            intent.putExtra("column", 3);
-                            intent.putExtra("row", 4);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
-                        else if(rowCount == 4 && columnCount == 4)
-                        {
-                            intent.putExtra("column", 4);
-                            intent.putExtra("row", 4);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
-                        else if(rowCount == 5 && columnCount == 4)
-                        {
-                            intent.putExtra("column", 4);
-                            intent.putExtra("row", 5);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
-                        else if(rowCount == 6 && columnCount == 4)
-                        {
-                            intent.putExtra("column", 4);
-                            intent.putExtra("row", 6);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
-                        else if(rowCount == 3 && columnCount == 3)
-                        {
-                            intent.putExtra("column", 3);
-                            intent.putExtra("row", 3);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
-                        else if(rowCount == 5 && columnCount == 3)
-                        {
-                            intent.putExtra("column", 3);
-                            intent.putExtra("row", 5);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
-                        else if(rowCount == 5 && columnCount == 5)
-                        {
-                            intent.putExtra("column", 5);
-                            intent.putExtra("row", 5);
-                            intent.putExtra("type", getIntent().getStringExtra("type"));
-                        }
+                        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        intent.putExtra("level", level);
+                        intent.putExtra("type", type);
 
                         startActivity(intent);
+                        finish();
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -1222,9 +1303,8 @@ public class InGame extends Activity
                             for(int i = 0; i < size; i++)
                             {
                                 //Drawable drawable = getResources().getDrawable(R.drawable.unfound);
-
-                                Bitmap batmapBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unfound);
-                                RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), batmapBitmap);
+                                Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.unfound);
+                                RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
 
                                 drawable.setCornerRadius(imageRadius);
 
@@ -1282,50 +1362,10 @@ public class InGame extends Activity
                                 public void onClick(DialogInterface dialog, int which)
                                 {
                                     Intent intent = new Intent(getApplicationContext(), InGame.class);
-                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
-                                    if(rowCount == 3 && columnCount == 2)
-                                    {
-                                        intent.putExtra("column", 2);
-                                        intent.putExtra("row", 3);
-                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                    }
-                                    else if(rowCount == 4 && columnCount == 3)
-                                    {
-                                        intent.putExtra("column", 3);
-                                        intent.putExtra("row", 4);
-                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                    }
-                                    else if(rowCount == 4 && columnCount == 4)
-                                    {
-                                        intent.putExtra("column", 4);
-                                        intent.putExtra("row", 4);
-                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                    }
-                                    else if(rowCount == 5 && columnCount == 4)
-                                    {
-                                        intent.putExtra("column", 4);
-                                        intent.putExtra("row", 5);
-                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                    }
-                                    else if(rowCount == 6 && columnCount == 4)
-                                    {
-                                        intent.putExtra("column", 4);
-                                        intent.putExtra("row", 6);
-                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                    }
-                                    else if(rowCount == 6 && columnCount == 5)
-                                    {
-                                        intent.putExtra("column", 5);
-                                        intent.putExtra("row", 6);
-                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                    }
-                                    else if(rowCount == 6 && columnCount == 6)
-                                    {
-                                        intent.putExtra("column", 6);
-                                        intent.putExtra("row", 6);
-                                        intent.putExtra("type", getIntent().getStringExtra("type"));
-                                    }
+                                    intent.putExtra("type", type);
+                                    intent.putExtra("level", level);
 
                                     startActivity(intent);
                                     finish();
@@ -1334,10 +1374,11 @@ public class InGame extends Activity
                             .setNegativeButton("No", new DialogInterface.OnClickListener() {
                                 public void onClick(DialogInterface dialog, int which)
                                 {
-                                    Intent intent = new Intent(getApplicationContext(), Modes.class);
-                                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                                    intent.putExtra("type", getIntent().getStringExtra("type"));
+                                    Intent intent = new Intent(getApplicationContext(), Levels.class);
+                                    //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                                    intent.putExtra("type", type);
                                     startActivity(intent);
+                                    finish();
                                 }
                             })
                             .setIcon(android.R.drawable.ic_dialog_alert)
@@ -1368,10 +1409,11 @@ public class InGame extends Activity
                 .setPositiveButton("Exit", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which)
                     {
-                        Intent intent = new Intent(getApplicationContext(), Modes.class);
-                        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-                        intent.putExtra("type", getIntent().getStringExtra("type"));
+                        Intent intent = new Intent(getApplicationContext(), Levels.class);
+                        //intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                        intent.putExtra("type", type);
                         startActivity(intent);
+                        finish();
                     }
                 })
                 .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -1403,5 +1445,54 @@ public class InGame extends Activity
             alertDialog.dismiss();
 
         exit(this.findViewById(android.R.id.content).getRootView());
+    }
+
+    private void getScreenSizes()
+    {
+        //Getting Height of Some Components
+
+        int statusBarHeight = 0;
+        int resourceId = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            statusBarHeight = getResources().getDimensionPixelSize(resourceId);
+        }
+
+        int actionBarHeight = 0;
+        final TypedArray styledAttributes = mContext.getTheme().obtainStyledAttributes(
+                new int[] { android.R.attr.actionBarSize }
+        );
+        actionBarHeight = (int) styledAttributes.getDimension(0, 0);
+        styledAttributes.recycle();
+
+        int navigationBarHeight = 0;
+        Resources resources = getApplicationContext().getResources();
+        resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            navigationBarHeight = resources.getDimensionPixelSize(resourceId);
+        }
+
+        //Getting Screen Size
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+
+
+        //Getting Usable Screen Size
+        height = displayMetrics.heightPixels - actionBarHeight - statusBarHeight - navigationBarHeight;
+        width = displayMetrics.widthPixels;
+    }
+
+    public void saveLevels(ArrayList<String> list, String key){
+        Gson gson = new Gson();
+        String json = gson.toJson(list);
+        levelDataEditor.putString(levelDataKey, json);
+        levelDataEditor.apply();
+    }
+
+    public ArrayList<String> getLevels(String key){
+        Gson gson = new Gson();
+        String defaultList = new Gson().toJson(defaultLevelArray);
+        String json = levelData.getString(levelDataKey, defaultList);
+        Type type1 = new TypeToken<ArrayList<String>>() {}.getType();
+        return gson.fromJson(json, type1);
     }
 }

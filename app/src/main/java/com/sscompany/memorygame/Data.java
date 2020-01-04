@@ -41,6 +41,70 @@ public class Data {
             0, 2, 0, 3, 0, 4, 0, 5, 0
     };
 
+    private final int[][] allPictures = new int[][]
+            {
+                    {
+                            R.drawable.apple,
+                            R.drawable.pear,
+                            R.drawable.pomegranate,
+                            R.drawable.banana,
+                            R.drawable.orange,
+                            R.drawable.strawberry,
+                            R.drawable.cherry,
+                            R.drawable.kiwi,
+                            R.drawable.grape,
+                            R.drawable.plum,
+                            R.drawable.apricot,
+                            R.drawable.lime,
+                            R.drawable.bomb
+                    },
+                    {
+                            R.drawable.lion,
+                            R.drawable.camel,
+                            R.drawable.cow,
+                            R.drawable.tiger,
+                            R.drawable.bear,
+                            R.drawable.elephant,
+                            R.drawable.rhinoceros,
+                            R.drawable.zebra,
+                            R.drawable.lemur,
+                            R.drawable.deer,
+                            R.drawable.sheep,
+                            R.drawable.wolf,
+                            R.drawable.bomb
+                    },
+                    {
+                            R.drawable.bmw,
+                            R.drawable.cadillac,
+                            R.drawable.lamborghini,
+                            R.drawable.volkswagen,
+                            R.drawable.ford,
+                            R.drawable.mazda,
+                            R.drawable.nissan,
+                            R.drawable.ferrari,
+                            R.drawable.porsche,
+                            R.drawable.seat,
+                            R.drawable.chevrolet,
+                            R.drawable.mercedes,
+                            R.drawable.bomb
+                    },
+                    {
+                            R.drawable.azerbaijan,
+                            R.drawable.turkey,
+                            R.drawable.russia,
+                            R.drawable.united_states,
+                            R.drawable.japan,
+                            R.drawable.germany,
+                            R.drawable.canada,
+                            R.drawable.united_kingdom,
+                            R.drawable.china,
+                            R.drawable.spain,
+                            R.drawable.brazil,
+                            R.drawable.argentina,
+                            R.drawable.bomb
+                    }
+            };
+
     public Data() {}
 
     public int getLevelDimensionX(int level)
@@ -71,5 +135,21 @@ public class Data {
     public int getLevelNumberOfFours(int level)
     {
         return levelNumberOfFours[level];
+    }
+
+    public int[] getPictures(String type){
+        if(type.equals("food"))
+            return allPictures[0];
+
+        if(type.equals("animal"))
+            return allPictures[1];
+
+        if(type.equals("car_logo"))
+            return allPictures[2];
+
+        if(type.equals("flag"))
+            return allPictures[3];
+
+        return new int[]{};
     }
 }

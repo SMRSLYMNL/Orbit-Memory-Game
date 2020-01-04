@@ -98,7 +98,6 @@ public class MainActivity extends AppCompatActivity
 
     public void fruits(View view)
     {
-        //Intent intent = new Intent(getApplicationContext(), Modes.class);
         Intent intent = new Intent(getApplicationContext(), Levels.class);
 
         intent.putExtra("type", "food");
@@ -108,7 +107,7 @@ public class MainActivity extends AppCompatActivity
 
     public void animal(View view)
     {
-        Intent intent = new Intent(getApplicationContext(), Modes.class);
+        Intent intent = new Intent(getApplicationContext(), Levels.class);
         intent.putExtra("type", "animal");
 
         startActivity(intent);
@@ -116,7 +115,7 @@ public class MainActivity extends AppCompatActivity
 
     public void flag(View view)
     {
-        Intent intent = new Intent(getApplicationContext(), Modes.class);
+        Intent intent = new Intent(getApplicationContext(), Levels.class);
         intent.putExtra("type", "flag");
 
         startActivity(intent);
@@ -124,7 +123,7 @@ public class MainActivity extends AppCompatActivity
 
     public void car_logo(View view)
     {
-        Intent intent = new Intent(getApplicationContext(), Modes.class);
+        Intent intent = new Intent(getApplicationContext(), Levels.class);
         intent.putExtra("type", "car_logo");
 
         startActivity(intent);
